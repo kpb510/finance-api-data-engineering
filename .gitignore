@@ -1,0 +1,9 @@
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables / secrets
+.env
+
+# OS junk files
+.DS_Store
