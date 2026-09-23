@@ -1,6 +1,6 @@
 import os 
+import json
 import requests 
-import polars as pl
 from datetime import datetime 
 from dotenv import load_dotenv
 
@@ -9,7 +9,7 @@ load_dotenv()
 API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
 
-def fetch_stock_data(ticker: str) -> pl.DataFrame:
+def fetch_stock_data(ticker: str) -> dict:
     """Fetch daily time series data for a given stock ticker from Alpha Vantage."""
     params = {
         "function": "TIME_SERIES_DAILY",
@@ -27,32 +27,19 @@ def fetch_stock_data(ticker: str) -> pl.DataFrame:
     if "Time Series (Daily)" not in data:
         raise Exception(f"Unexpected API response: {data}")
     
-    time_series = data["Time Series (Daily)"]
-    
-    # Reshape nested JSON into flat list of row dicts 
-    records = []
-    for date_str, values in time_series.items():
-        record = {"date": date_str}
-        for key, value in values.items():
-            clean_key = key.split(". ")[1] # "1. open" -> "open"
-            record[clean_key] = float(value)
-        records.append(record)
-    
-    df = pl.DataFrame(records)
-    df = df.with_columns(pl.col("date").str.to_date())
-    df = df.sort("date")
-    return df
+    return data
 
-def save_raw_data(df: pl.DataFrame, ticker: str, output_dir: str = "data/raw"):
+def save_raw_json(data: dict, ticker: str, output_dir: str = "data/raw") -> str:
+    """Persist the untouched API response, timestamped so re-runs never overwrite."""
     os.makedirs(output_dir, exist_ok=True)
-    fetch_date = datetime.now().strftime("%Y-%m-%d")
-    filepath = os.path.join(output_dir, f"{ticker}_{fetch_date}.csv")
-    df.write_csv(filepath)
-    print(f"Saved {df.height} rows to {filepath}")
+    run_timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    filepath = os.path.join(output_dir, f"{ticker}_{run_timestamp}.json")
+    with open(filepath, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Saved raw response to {filepath}")
     return filepath
 
 if __name__ == "__main__":
     ticker = "AAPL"
-    df = fetch_stock_data(ticker)
-    print(df.head())
-    save_raw_data(df, ticker) 
+    raw_data = fetch_stock_data(ticker)
+    save_raw_json(raw_data, ticker)
