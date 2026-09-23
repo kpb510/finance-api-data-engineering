@@ -7,3 +7,6 @@ venv/
 
 # OS junk files
 .DS_Store
+
+# Data storage
+/data
