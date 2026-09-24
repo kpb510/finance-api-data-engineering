@@ -1,8 +1,10 @@
 import os 
 import json
+import time
 import requests 
 from datetime import datetime 
 from dotenv import load_dotenv
+from config import TICKERS, REQUEST_DELAY_SECONDS
 
 load_dotenv()
 
@@ -19,6 +21,7 @@ def fetch_stock_data(ticker: str) -> dict:
     }
     
     response = requests.get(BASE_URL, params=params)
+    
     if response.status_code != 200:
         raise Exception(f"API request failed with status {response.status_code}")
     
@@ -39,7 +42,18 @@ def save_raw_json(data: dict, ticker: str, output_dir: str = "data/raw") -> str:
     print(f"Saved raw response to {filepath}")
     return filepath
 
+def run_ingestion(tickers: list[str]):
+    """Fetch and save raw data for each ticker, pacing requests to respect rate limits."""
+    for i, ticker in enumerate(tickers):
+        print(f"Fetching {ticker}...")
+        raw_data = fetch_stock_data(ticker)
+        save_raw_json(raw_data, ticker)
+        
+        is_last = (i == len(tickers) - 1)
+        if not is_last:
+            print(f"Waiting {REQUEST_DELAY_SECONDS}s before next request...")
+            time.sleep(REQUEST_DELAY_SECONDS)
+            
+            
 if __name__ == "__main__":
-    ticker = "AAPL"
-    raw_data = fetch_stock_data(ticker)
-    save_raw_json(raw_data, ticker)
+    run_ingestion(TICKERS)

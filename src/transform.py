@@ -2,6 +2,7 @@ import os
 import json 
 import glob
 import polars as pl 
+from config import TICKERS
 
 def load_latest_raw_json(ticker: str, raw_dir: str = "data/raw") -> dict:
     """Find and load the most recently saved raw JSON file for a ticker."""
@@ -37,8 +38,13 @@ def save_processed_parquet(df: pl.DataFrame, ticker: str, output_dir: str = "dat
     print(f"Saved {df.height} rows to {filepath}")
     return filepath
 
+def run_transform(tickers: list[str]):
+    """Transform each ticker's latest raw JSON into a processed Parquet file."""
+    for ticker in tickers:
+        print(f"Transforming {ticker}...")
+        raw_data = load_latest_raw_json(ticker)
+        df = parse_to_dataframe(raw_data)
+        save_processed_parquet(df, ticker)
+
 if __name__ == "__main__":
-    ticker = "AAPL"
-    raw_data = load_latest_raw_json(ticker)
-    df = parse_to_dataframe(raw_data)
-    save_processed_parquet(df, ticker)
+    run_transform(TICKERS)
