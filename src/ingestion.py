@@ -46,8 +46,12 @@ def run_ingestion(tickers: list[str]):
     """Fetch and save raw data for each ticker, pacing requests to respect rate limits."""
     for i, ticker in enumerate(tickers):
         print(f"Fetching {ticker}...")
-        raw_data = fetch_stock_data(ticker)
-        save_raw_json(raw_data, ticker)
+        try:
+            raw_data = fetch_stock_data(ticker)
+            save_raw_json(raw_data, ticker)
+        except Exception as e:
+            # Continue to next ticker rather than crashing whole run.
+            print(f"FAILED to fetch {ticker}: {e}")
         
         is_last = (i == len(tickers) - 1)
         if not is_last:
