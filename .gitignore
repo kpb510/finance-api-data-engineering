@@ -10,3 +10,6 @@ venv/
 
 # Data storage
 /data
+
+__pycache__/
+*.pyc
