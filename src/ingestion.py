@@ -1,12 +1,19 @@
 import os 
 import json
 import time
+import logging 
 import requests 
 from datetime import datetime 
 from dotenv import load_dotenv
 from config import TICKERS, REQUEST_DELAY_SECONDS
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
@@ -39,25 +46,33 @@ def save_raw_json(data: dict, ticker: str, output_dir: str = "data/raw") -> str:
     filepath = os.path.join(output_dir, f"{ticker}_{run_timestamp}.json")
     with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
-    print(f"Saved raw response to {filepath}")
+    logger.info(f"Saved raw response to {filepath}")
     return filepath
 
 def run_ingestion(tickers: list[str]):
     """Fetch and save raw data for each ticker, pacing requests to respect rate limits."""
+    success_count = 0
+    failure_count = 0
     for i, ticker in enumerate(tickers):
-        print(f"Fetching {ticker}...")
+        logger.info(f"Fetching {ticker}...")
         try:
             raw_data = fetch_stock_data(ticker)
             save_raw_json(raw_data, ticker)
+            success_count += 1
         except Exception as e:
             # Continue to next ticker rather than crashing whole run.
-            print(f"FAILED to fetch {ticker}: {e}")
-        
+            logger.error(f"Failed to fetch {ticker}: {e}")
+            failure_count +=1
+                    
         is_last = (i == len(tickers) - 1)
         if not is_last:
-            print(f"Waiting {REQUEST_DELAY_SECONDS}s before next request...")
+            logger.info(f"Waiting {REQUEST_DELAY_SECONDS}s before next request...")
             time.sleep(REQUEST_DELAY_SECONDS)
-            
+    
+    logger.info(f"Ingestion complete: {success_count} succeeded, {failure_count} failed")
+    
+    if success_count == 0 and failure_count > 0:
+        raise RuntimeError("Ingestion failed for every supplied ticker - aborting pipeline")            
             
 if __name__ == "__main__":
     run_ingestion(TICKERS)
