@@ -5,7 +5,7 @@ import logging
 import requests 
 from datetime import datetime 
 from dotenv import load_dotenv
-from config import TICKERS, REQUEST_DELAY_SECONDS
+from src.config import TICKERS, REQUEST_DELAY_SECONDS
 
 load_dotenv()
 

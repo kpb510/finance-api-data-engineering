@@ -2,7 +2,7 @@ import os
 import json 
 import glob
 import polars as pl 
-from config import TICKERS
+from src.config import TICKERS
 
 def load_latest_raw_json(ticker: str, raw_dir: str = "data/raw") -> dict:
     """Find and load the most recently saved raw JSON file for a ticker."""
