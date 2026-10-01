@@ -33,3 +33,18 @@ def list_tickers():
     files = [f for f in os.listdir(PROCESSED_DIR) if f.endswith(".parquet")]
     tickers = [f.replace(".parquet", "") for f in files]
     return {"tickers": tickers}
+
+@app.get("/api/tickers/{ticker}/analytics")
+def get_ticker_analytics(ticker: str): 
+    """Return processed price data enriched with computed analytics."""
+    filepath = os.path.join(PROCESSED_DIR, f"{ticker.upper()}.parquet")
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
+    df = pl.read_parquet(filepath)
+    df = df.with_columns([
+        pl.col("close").rolling_mean(window_size=7).alias("moving_avg_7d"),
+        (pl.col("close").pct_change() * 100 ).alias("daily_pct_change"),
+    ])
+    
+    return df.to_dicts()
